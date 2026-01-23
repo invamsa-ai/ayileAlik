@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم | PHONEX Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root { 
+            --primary-red: #e63946; 
+            --bg-body: #f4f6f9; 
+            --bg-white: #ffffff; 
+            --text-dark: #2d3436; 
+            --sidebar-width: 260px;
+            --font-heading: 'Cairo', sans-serif;
+            --font-body: 'Tajawal', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+        body { background: var(--bg-body); color: var(--text-dark); display: flex; min-height: 100vh; font-family: var(--font-body); }
+        h1, h2, h3, h4, .btn-primary, .nav-link { font-family: var(--font-heading); }
+
+        /* Sidebar */
+        .sidebar { width: var(--sidebar-width); background: var(--bg-white); height: 100vh; position: fixed; top: 0; right: 0; border-left: 1px solid #eee; display: flex; flex-direction: column; padding: 20px; z-index: 1000; transition: 0.3s; }
+        
+     .logo { 
+            margin-bottom: 10px; /* تقليل المسافة السفلية */
+            text-align: center; 
+            padding: 5px 0; /* تقليل الحواف الداخلية */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* 🔴 تنسيق الشعار SVG الجديد 🔴 */
+     /* 🔴 تعديل حجم الشعار ليكون كبيراً وواضحاً */
+        .logo svg {
+            width: 230px; /* عرض ثابت وكبير */
+            height: auto; /* الحفاظ على الأبعاد */
+            fill: var(--primary-red); 
+            transition: 0.3s;
+        }
+        .logo svg:hover {
+            transform: scale(1.05); 
+        }
+
+        .nav-links { display: flex; flex-direction: column; gap: 10px; }
+        .nav-link { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: #636e72; text-decoration: none; border-radius: 12px; transition: 0.3s; font-weight: 600; cursor: pointer; font-size: 1.05rem; }
+        .nav-link:hover, .nav-link.active { background: #fff0f1; color: var(--primary-red); }
+        .nav-link i { font-size: 1.2rem; }
+
+        /* Main Content */
+        .main-content { margin-right: var(--sidebar-width); flex: 1; padding: 30px; width: calc(100% - var(--sidebar-width)); transition: 0.3s; padding-bottom: 80px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h2 { font-weight: 800; }
+
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--bg-white); padding: 25px; border-radius: 16px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 20px; transition: 0.3s; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
+        .stat-icon { width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: white; }
+        .stat-card h3 { font-size: 1.8rem; margin-bottom: 5px; font-weight: 800; }
+
+        /* Tables */
+        .table-container { background: var(--bg-white); border-radius: 16px; padding: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); overflow-x: auto; }
+        .table-container h3 { font-weight: 700; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th, td { padding: 15px; text-align: right; border-bottom: 1px solid #eee; }
+        th { color: #888; font-weight: 600; font-size: 0.9rem; }
+        td { font-weight: 500; }
+        
+        .btn-primary { background: var(--primary-red); color: white; padding: 12px 25px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.2s; box-shadow: 0 5px 15px rgba(230, 57, 70, 0.2); }
+        .btn-primary:hover { transform: translateY(-2px); }
+        .btn-icon { padding: 8px; border-radius: 8px; cursor: pointer; border: none; margin-left: 5px; transition: 0.2s; }
+        .btn-icon:hover { transform: scale(1.1); }
+        .btn-edit { background: #e3f2fd; color: #0984e3; }
+        .btn-delete { background: #ffebeb; color: #d63031; }
+
+        /* Settings */
+        .settings-card { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 16px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05); 
+            width: 100%; 
+            max-width: 100%; 
+        }
+        .toggle-switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary-red); }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 450px; max-width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+        .modal-content h3 { font-weight: 800; color: var(--text-dark); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 700; font-size: 0.95rem; color: #555; }
+        .form-control { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-family: var(--font-body); font-size: 1rem; transition: 0.3s; }
+        .form-control:focus { border-color: var(--primary-red); box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.1); }
+        input[type="file"] { background: #f9f9f9; padding: 10px; }
+        
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-red); border-radius: 50%; width: 25px; height: 25px; animation: spin 1s linear infinite; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .page-section { display: none; animation: fadeIn 0.4s; }
+        .page-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%; height: 75px;
+                top: auto; bottom: 0; right: 0; left: 0;
+                border-left: none; border-top: 1px solid #eee;
+                padding: 0; flex-direction: row; justify-content: space-around;
+                align-items: center; box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+            }
+            .logo { display: none; } 
+            .nav-links { flex-direction: row; width: 100%; justify-content: space-around; gap: 0; }
+            .nav-link { flex-direction: column; gap: 4px; padding: 8px; font-size: 0.75rem; border-radius: 0; background: none !important; }
+            .nav-link i { font-size: 1.3rem; margin-bottom: 0; }
+            .nav-link.active { color: var(--primary-red); }
+            .nav-link span { display: block; font-weight: 700; }
+
+            .main-content { margin-right: 0; padding: 20px; padding-bottom: 100px; }
+            .header h2 { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">
+            <svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+             width="100%" height="100%" viewBox="0 0 2048.000000 2048.000000"
+             preserveAspectRatio="xMidYMid meet">
+            <g transform="translate(0.000000,2048.000000) scale(0.100000,-0.100000)"
+            fill="#e63946" stroke="none"> <path d="M12835 14754 c-16 -13 -31 -24 -35 -24 -17 0 -170 -165 -194 -211
+            -24 -44 -28 -60 -24 -113 6 -91 49 -139 140 -154 88 -15 37 -50 -127 -87 -41
+            -9 -75 -20 -75 -25 0 -5 15 -43 34 -84 l34 -75 62 4 c95 6 121 20 224 125 98
+            100 116 133 100 179 -10 28 -70 66 -117 75 -126 23 -127 51 -1 115 82 41 96
+            69 78 154 -30 143 -48 165 -99 121z"/>
+            <path d="M9685 14416 c-106 -46 -148 -220 -78 -320 28 -39 31 -41 88 -44 33
+            -2 69 2 80 8 54 29 72 127 36 186 -26 42 -78 60 -127 44 -19 -7 -38 -10 -41
+            -7 -14 40 76 75 88 47 14 54 22 46 42 -7 20 -38 21 -79 3z m60 -191 c46
+            -45 22 -135 -35 -135 -32 0 -70 44 -70 81 0 37 33 79 62 79 10 0 30 -11 43
+            -25z"/>
+            <path d="M9303 14370 c-57 -34 -86 -120 -40 -120 27 0 47 17 47 40 0 44 73 66
+            103 32 29 -32 20 -66 -37 -145 -29 -41 -64 -93 -77 -116 -37 -66 -22 -70 158
+            -36 10 2 33 4 51 4 28 1 32 4 32 27 0 26 -1 26 -42 19 -24 -3 -65 -9 -93 -12
+            -40 -4 -47 -3 -38 8 140 174 159 241 87 298 -35 28 -107 28 -151 1z"/>
+            <path d="M8998 14319 c-15 -6 -37 -26 -49 -46 -19 -30 -21 -44 -16 -101 13
+            -159 64 -228 160 -219 38 3 56 11 80 36 30 30 32 36 31 100 -2 90 -28 177 -64
+            212 -23 23 -37 29 -72 28 -24 0 -55 -5 -70 -10z m95 -57 c21 -23 47 -124 47
+            -183 0 -33 -6 -51 -20 -64 -24 -22 -64 -14 -84 18 -16 23 -46 143 -46 180 0
+            57 67 89 103 49z"/>
+            <path d="M8680 14241 c-41 -15 -47 -21 -63 -70 -20 -60 -15 -72 26 -64 22 4
+            27 11 27 34 0 62 79 91 109 38 20 -37 8 -82 -49 -182 -49 -86 -60 -120 -40
+            -132 11 -7 230 52 245 66 6 6 3 15 -7 25 -14 14 -22 13 -87 -6 -40 -12 -75
+            -20 -78 -16 -3 3 10 32 29 63 68 112 77 186 29 234 -34 34 -70 36 -141 10z"/>
+            <path d="M8190 14074 c-19 -9 -70 -29 -114 -45 -92 -34 -106 -43 -99 -69 7
+            -25 20 -25 77 0 25 10 47 16 50 12 2 -4 29 -70 61 -147 31 -77 59 -142 61
+            -144 8 -9 54 11 54 24 0 12 -60 163 -105 263 l-15 34 50 21 c40 17 50 26 48
+            42 -4 26 -24 28 -68 9z"/>
+            <path d="M13000 13933 c-19 -8 -84 -32 -145 -53 -210 -74 -199 -70 -277 -103
+            -42 -18 -44 -23 -63 -194 -27 -247 -17 -626 25 -938 39 -288 186 -760 287
+            -923 l20 -32 47 122 c27 68 54 137 61 153 32 71 75 187 75 204 0 9 -11 51 -25
+            92 -50 143 -85 311 -96 454 -12 149 -6 532 11 645 12 87 29 190 34 215 17 80
+            51 221 68 277 26 90 23 101 -22 81z"/>
+            <path d="M7845 13923 c-35 -9 -103 -57 -114 -81 -26 -55 -2 -111 57 -133 16
+            -6 58 -8 103 -4 63 6 79 4 92 -10 23 -23 21 -42 -7 -70 -37 -36 -72 -42 -107
+            -16 -23 17 -33 19 -49 11 -29 -16 -24 -36 15 -60 40 -25 93 -21 157 11 76 39
+            92 113 36 169 l-32 32 -84 -6 c-68 -6 -88 -4 -108 9 -31 20 -30 39 1 70 28 29
+            79 33 106 9 14 -12 22 -13 39 -4 30 16 21 42 -20 62 -36 17 -50 19 -85 11z"/>
+            <path d="M9849 13861 c-13 -10 -62 -40 -109 -66 -47 -26 -87 -51 -90 -54 -3
+            -4 -60 -34 -127 -66 -75 -37 -122 -66 -123 -75 0 -8 10 -31 22 -50 31 -51 134
+            -259 163 -332 50 -122 97 -344 110 -515 12 -173 -32 -363 -102 -435 -61 -63
+            -104 -76 -333 -103 -327 -38 -592 -184 -683 -375 -27 -56 -31 -76 -32 -147 0
+            -76 2 -83 31 -119 50 -62 106 -85 298 -125 93 -19 173 -49 187 -72 12 -18 -3
+            -71 -31 -112 -35 -51 -157 -114 -280 -146 -121 -32 -279 -32 -377 -1 -148 46
+            -231 151 -220 276 5 52 10 65 36 88 20 18 43 28 64 29 129 3 122 1 119 37 -4
+            35 -38 136 -106 314 -58 151 -84 201 -100 195 -8 -3 -35 -8 -62 -12 -84 -12
+            -189 -69 -263 -144 -166 -166 -242 -380 -213 -604 28 -223 120 -382 282 -488
+            144 -93 392 -145 580 -120 314 43 581 206 741 454 64 99 83 159 83 267 0 78
+            -3 102 -21 135 -33 63 -99 118 -188 154 -44 18 -84 36 -88 40 -15 15 5 38 51
+            59 79 35 113 42 258 51 254 17 371 82 486 274 22 37 42 67 44 67 2 0 15 -22
+            29 -50 95 -188 347 -315 554 -280 156 26 268 82 377 190 133 130 194 257 202
+            419 7 141 -30 304 -88 391 -9 14 -19 32 -22 40 -19 52 -170 200 -205 200 -7 0
+            -54 -62 -103 -137 -50 -76 -94 -143 -98 -148 -4 -6 -26 -38 -50 -72 l-43 -62
+            32 -28 c107 -93 149 -167 149 -262 0 -56 -3 -63 -37 -100 -43 -45 -94 -62
+            -183 -62 -113 -1 -204 63 -263 184 -64 132 -75 208 -78 542 -3 275 -26 518
+            -74 777 -27 140 -47 198 -68 198 -8 0 -25 -8 -38 -19z"/>
+            <path d="M7586 13785 c-15 -8 -62 -36 -102 -61 -71 -44 -74 -48 -61 -68 8 -11
+            47 -77 86 -146 40 -69 79 -131 86 -139 11 -12 25 -6 92 34 43 26 88 53 101 59
+            12 6 20 17 17 24 -3 8 -5 18 -5 23 0 16 -19 10 -91 -31 -39 -22 -74 -40 -79
+            -40 -10 0 -52 89 -46 98 3 5 30 21 60 37 56 29 73 59 42 71 -14 5 -67 -17 -96
+            -41 -30 -24 -50 -25 -64 -2 -35 55 -32 63 44 108 78 46 83 50 74 73 -8 20 -21
+            20 -58 1z"/>
+            <path d="M11591 13009 c-117 -20 -229 -115 -300 -257 -52 -103 -73 -192 -73
+            -309 0 -117 13 -176 68 -289 36 -76 55 -102 111 -154 114 -104 218 -155 377
+            -185 47 -9 119 -15 158 -13 62 3 73 1 76 -14 4 -19 -67 -117 -116 -160 -97
+            -86 -326 -140 -497 -118 -131 17 -161 22 -177 26 -28 8 -22 -14 32 -111 27
+            -49 72 -133 99 -185 27 -52 76 -133 108 -180 l59 -85 64 2 c186 7 377 114 515
+            286 157 197 237 546 214 937 -23 405 -232 736 -507 801 -83 20 -126 22 -211 8z
+            m266 -517 c70 -44 166 -300 124 -327 -13 -7 -142 29 -195 55 -90 43 -135 118
+            -121 201 7 41 48 82 90 91 28 7 76 -3 102 -20z"/>
+            <path d="M10375 11535 c-148 -32 -265 -79 -265 -106 0 -22 115 -364 127 -379
+            2 -2 7 0 11 6 7 10 59 36 191 96 100 45 215 71 291 65 67 -5 159 -39 207 -77
+            15 -11 30 -17 34 -13 9 10 87 221 91 247 2 12 -5 24 -17 31 -11 5 -40 22 -65
+            37 -148 86 -434 131 -605 93z"/>
+            <path d="M11099 10878 c-12 -23 -38 -68 -59 -98 -20 -30 -39 -63 -43 -72 -3
+            -10 7 -84 24 -165 27 -138 36 -226 53 -545 5 -84 3 -99 -13 -120 -17 -20 -28
+            -23 -98 -23 -148 0 -178 32 -167 179 4 57 2 112 -5 145 -15 71 -70 201 -84
+            201 -12 -1 -38 -39 -100 -144 -26 -43 -28 -53 -19 -80 6 -17 25 -69 41 -116
+            17 -47 31 -101 31 -121 0 -63 -14 -68 -195 -70 -92 -1 -171 3 -186 9 -14 6
+            -38 25 -54 43 -27 33 -28 34 -21 139 25 430 16 624 -40 818 -9 28 -19 52 -23
+            52 -4 0 -15 -17 -25 -37 -9 -21 -37 -68 -62 -104 l-45 -66 15 -59 c36 -138 48
+            -252 53 -513 5 -218 3 -265 -8 -272 -25 -16 -677 -11 -791 6 -126 19 -208 59
+            -253 123 -27 39 -30 51 -30 120 0 43 4 102 8 132 l8 55 -30 -34 c-36 -40 -93
+            -154 -115 -230 -22 -76 -21 -172 3 -219 28 -54 77 -100 141 -132 106 -53 129
+            -55 595 -55 482 0 465 -2 500 72 10 21 19 40 21 42 1 2 24 -18 49 -43 48 -47
+            146 -89 153 -66 3 7 8 7 18 -1 9 -7 55 -10 141 -7 150 4 178 15 212 85 l22 45
+            39 -45 c55 -63 126 -91 204 -83 80 8 114 31 146 95 l27 53 18 -29 c26 -41 64
+            -73 115 -97 41 -19 66 -21 280 -24 129 -2 294 -1 366 3 l130 7 32 97 c18 53
+            32 104 32 112 0 12 -29 13 -189 11 l-189 -4 -25 34 c-30 39 -77 175 -79 231
+            -1 24 4 42 13 48 17 12 137 3 176 -12 15 -7 65 -12 110 -13 74 -1 84 1 108 24
+            31 29 108 177 99 191 -3 5 -33 9 -67 9 -34 1 -91 7 -127 15 -197 43 -297 -9
+            -393 -205 -41 -84 -42 -87 -44 -200 l-2 -115 -94 2 c-113 2 -163 21 -189 72
+            -15 30 -16 59 -11 250 4 181 2 244 -16 392 -18 155 -51 333 -65 346 -2 3 -15
+            -15 -27 -39z"/>
+            <path d="M9456 10449 c-38 -25 -55 -46 -77 -93 -16 -34 -29 -69 -29 -78 0 -27
+            21 -66 39 -73 9 -4 80 -6 159 -5 119 1 142 -2 142 -14 0 -23 -32 -28 -183 -30
+            l-140 -2 -23 -45 c-13 -24 -23 -50 -24 -56 0 -20 271 -18 341 3 63 19 113 66
+            130 124 28 94 -12 119 -207 127 -74 3 -137 10 -141 15 -13 22 27 41 95 46 65
+            4 72 7 81 31 6 14 12 37 13 51 3 24 1 25 -62 28 -59 3 -70 0 -114 -29z"/>
+            <path d="M8290 10423 c-65 -11 -181 -47 -237 -74 -72 -34 -74 -41 -44 -135 10
+            -32 36 -112 56 -176 l37 -118 52 28 c28 15 53 30 54 35 2 4 10 7 18 7 8 0 36
+            11 62 24 109 54 203 79 297 80 83 0 94 -2 150 -33 33 -18 68 -40 77 -48 15
+            -13 18 -13 21 -2 14 51 44 133 68 186 16 34 26 69 23 77 -10 27 -161 93 -294
+            128 -72 19 -278 32 -340 21z"/>
+            <path d="M10712 9510 c-24 -33 -47 -60 -52 -60 -5 0 -38 25 -74 55 -35 30 -69
+            55 -75 55 -9 0 -129 -152 -137 -175 -5 -13 149 -165 167 -165 8 0 30 28 49 61
+            19 33 40 65 46 70 8 7 36 -14 89 -67 42 -42 79 -73 83 -69 10 9 78 124 104
+            173 l23 44 -55 49 c-52 48 -108 89 -121 89 -3 0 -24 -27 -47 -60z"/>
+            <path d="M9965 8824 c-6 -2 -9 -62 -7 -158 l3 -155 -27 -17 c-21 -14 -48 -18
+            -128 -18 -151 0 -183 19 -174 105 2 28 0 34 -17 34 -16 0 -21 -9 -27 -47 -16
+            -91 24 -127 152 -139 74 -6 189 5 221 22 10 5 32 2 57 -8 37 -14 45 -14 88 0
+            40 13 51 13 68 2 23 -15 93 -13 121 2 12 7 26 6 47 -5 47 -23 150 -12 228 26
+            l65 31 26 -32 c25 -30 31 -32 90 -32 35 0 76 3 90 7 46 13 60 75 38 164 -11
+            44 -22 52 -48 35 -12 -8 -12 -16 2 -53 33 -85 17 -108 -70 -108 -63 0 -100 31
+            -52 43 23 6 22 26 -2 38 -92 46 -161 69 -208 69 -51 0 -52 -1 -49 -27 3 -25 6
+            -28 37 -25 43 5 121 -17 121 -33 0 -36 -201 -81 -249 -56 -19 11 -21 17 -15
+            57 6 43 5 44 -20 44 -21 0 -26 -5 -26 -26 0 -28 -16 -65 -34 -76 -17 -12 -61
+            -9 -79 5 -13 10 -17 41 -23 175 -6 149 -8 162 -25 162 -18 0 -19 -11 -19 -163
+            0 -175 -3 -187 -50 -187 -55 0 -59 11 -66 188 -7 158 -10 169 -39 156z"/>
+            <path d="M8745 8788 c-71 -35 -115 -74 -115 -102 0 -12 26 -46 65 -82 99 -94
+            85 -124 -58 -124 -92 0 -101 6 -94 59 3 23 1 42 -4 43 -5 0 -14 1 -20 2 -6 1
+            -18 -21 -27 -49 l-17 -50 -45 0 -45 0 -32 65 c-34 69 -40 75 -63 60 -13 -8
+            -13 -12 1 -37 48 -81 21 -158 -69 -203 -47 -24 -52 -30 -42 -51 12 -22 26 -18
+            91 23 25 16 56 47 68 69 19 33 25 37 41 29 26 -14 80 -12 110 4 21 12 29 12
+            52 0 38 -20 181 -13 226 10 37 19 49 54 32 95 -12 29 -97 121 -112 121 -4 0
+            -8 6 -8 14 0 7 38 32 85 55 76 38 84 45 75 62 -14 24 -22 23 -95 -13z"/>
+            <path d="M8891 8781 c-11 -7 -12 -40 -6 -180 7 -168 8 -172 29 -169 23 3 21
+            -20 18 246 -2 114 -6 125 -41 103z"/>
+            <path d="M12358 8672 c-36 -4 -88 -64 -88 -102 0 -16 11 -42 26 -60 l27 -31
+            -59 3 -59 3 -30 63 c-19 41 -35 62 -47 62 -22 0 -33 -17 -20 -33 24 -29 31
+            -88 16 -127 -16 -39 -76 -90 -107 -90 -10 0 -17 -8 -17 -20 0 -69 138 4 164
+            87 6 19 11 20 39 12 52 -15 126 -10 206 12 82 23 95 33 80 61 -9 17 -12 17
+            -39 3 -42 -22 -77 -19 -105 10 -49 48 -21 99 53 100 39 1 47 4 47 20 0 21 -39
+            33 -87 27z"/>
+            <path d="M11570 8615 c-25 -14 -67 -49 -93 -78 -46 -50 -48 -51 -63 -32 -8 11
+            -18 31 -21 45 -8 36 -21 49 -43 43 -22 -6 -26 -33 -9 -50 5 -5 13 -35 16 -66
+            5 -52 4 -58 -25 -86 -25 -26 -38 -31 -77 -31 -59 0 -113 25 -121 55 -3 13 -4
+            42 -2 66 3 38 0 44 -17 44 -16 0 -21 -9 -27 -53 -16 -108 33 -156 159 -157 69
+            0 73 2 108 35 19 19 39 48 44 65 6 22 13 29 27 27 62 -12 191 -13 229 -2 96
+            27 125 111 60 176 -32 32 -86 32 -145 -1z m114 -41 c22 -21 20 -47 -5 -70 -17
+            -15 -40 -20 -108 -22 l-86 -4 39 41 c64 66 128 88 160 55z"/>
+            <path d="M9063 8615 c-51 -22 -79 -97 -53 -145 12 -23 72 -44 101 -35 16 5 20
+            3 17 -10 -5 -26 -51 -57 -95 -64 -31 -6 -37 -11 -35 -26 5 -28 6 -28 52 -20
+            46 8 102 51 126 96 27 53 12 164 -27 195 -25 20 -53 23 -86 9z"/>
+            <path d="M11830 8595 c-15 -16 -24 -41 -27 -72 -6 -62 15 -84 81 -85 51 -1 56
+            -8 26 -38 -24 -24 -62 -40 -96 -40 -17 0 -24 -5 -24 -20 0 -28 24 -35 71 -21
+            103 31 150 141 107 254 -20 53 -97 66 -138 22z"/>
+            </g>
+            </svg>
+        </div>
+        
+        <div class="nav-links">
+            <div class="nav-link active" onclick="switchPage('dashboard', this)">
+                <i class="fas fa-th-large"></i> <span>الرئيسية</span>
+            </div>
+            <div class="nav-link" onclick="switchPage('products', this)">
+                <i class="fas fa-mobile-alt"></i> <span>المنتجات</span>
+            </div>
+            <div class="nav-link" onclick="switchPage('orders', this)">
+                <i class="fas fa-shopping-bag"></i> <span>الطلبات</span>
+            </div>
+            <div class="nav-link" onclick="switchPage('settings', this)">
+                <i class="fas fa-cog"></i> <span>الإعدادات</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h2 id="pageTitle">الرئيسية</h2>
+            <div style="font-weight:bold; color:#888;">Admin Panel</div>
+        </div>
+
+        <section id="dashboard" class="page-section active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #e63946;"><i class="fas fa-dollar-sign"></i></div>
+                    <div><h3 id="totalSales">$0</h3><p style="color:#888">إجمالي المبيعات</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #0984e3;"><i class="fas fa-shopping-cart"></i></div>
+                    <div><h3 id="totalOrders">0</h3><p style="color:#888">عدد الطلبات</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #00b894;"><i class="fas fa-box"></i></div>
+                    <div><h3 id="totalProducts">0</h3><p style="color:#888">عدد الجوالات</p></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="products" class="page-section">
+            <div class="table-container">
+                <div style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center;">
+                    <h3>قائمة الجوالات</h3>
+                    <button class="btn-primary" onclick="openModal()"><i class="fas fa-plus"></i> إضافة جديد</button>
+                </div>
+                <table id="productsTable">
+                    <thead><tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>إجراءات</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="orders" class="page-section">
+            <div class="table-container">
+                <h3>إدارة الطلبات</h3>
+                <table id="ordersTable">
+                    <thead><tr><th>رقم الطلب</th><th>العميل</th><th>السعر</th><th>الحالة</th><th>تحديث</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="settings" class="page-section">
+            <div class="settings-card">
+                <h3 style="margin-bottom:20px;">إعدادات المتجر</h3>
+                
+                <div class="form-group">
+                    <label>نسبة الخصم للدفع الإلكتروني (%)</label>
+                    <input type="number" id="settingDiscount" class="form-control" placeholder="مثلاً: 10">
+                </div>
+
+                <div class="form-group" style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+                    <label style="margin:0">تفعيل الدفع عند الاستلام</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="settingCod">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <button class="btn-primary" onclick="saveSettings()" style="margin-top:20px; width:100%;">حفظ التغييرات</button>
+            </div>
+        </section>
+    </div>
+
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle" style="margin-bottom:20px;">إضافة منتج</h3>
+            <input type="hidden" id="editProductId"> 
+            
+            <div class="form-group"><label>اسم الجوال</label><input type="text" id="pName" class="form-control"></div>
+            <div class="form-group"><label>السعر ($)</label><input type="number" id="pPrice" class="form-control"></div>
+            
+            <div class="form-group">
+                <label>صورة المنتج</label>
+                <input type="file" id="pImgFile" class="form-control" accept="image/*">
+                <div id="currentImgPreview" style="margin-top:5px; font-size:0.8rem; color:#666; font-weight:600;"></div>
+            </div>
+
+            <div class="form-group"><label>المواصفات / الوصف</label><textarea id="pDesc" class="form-control" rows="3"></textarea></div>
+            
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button class="btn-primary" onclick="saveProduct()" id="saveBtn">حفظ</button>
+                <div class="loader" id="loader"></div>
+                <button onclick="closeModal()" style="padding:10px; cursor:pointer; border:none; background:none; font-family:var(--font-heading); font-weight:700; color:#666;">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://wetluuertelivaztjwhy.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_Bx2bp8LptcUFrN3dejNE2Q_-j6Y9Ln1';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function loadData() {
+            const { data: products } = await db.from('products').select('*').order('id', { ascending: false });
+            renderProducts(products || []);
+            document.getElementById('totalProducts').innerText = products ? products.length : 0;
+
+            const { data: orders } = await db.from('orders').select('*').order('created_at', { ascending: false });
+            renderOrders(orders || []);
+            document.getElementById('totalOrders').innerText = orders ? orders.length : 0;
+            const sales = orders ? orders.reduce((sum, order) => sum + Number(order.total_price), 0) : 0;
+            document.getElementById('totalSales').innerText = `$${sales.toFixed(2)}`;
+
+            loadSettings();
+        }
+
+        function renderProducts(list) {
+            const tbody = document.querySelector('#productsTable tbody');
+            tbody.innerHTML = list.map(p => `
+                <tr>
+                    <td><img src="${p.image_url}" width="50" height="50" style="object-fit:contain; background:#f9f9f9; border-radius:10px; border:1px solid #eee;"></td>
+                    <td><b>${p.name}</b></td>
+                    <td style="color:var(--primary-red); font-weight:bold;">$${p.price}</td>
+                    <td>
+                        <button class="btn-icon btn-edit" onclick='openEditModal(${JSON.stringify(p)})'><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon btn-delete" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderOrders(list) {
+            const tbody = document.querySelector('#ordersTable tbody');
+            tbody.innerHTML = list.map(o => `
+                <tr>
+                    <td><small style="background:#eee; padding:3px 8px; border-radius:5px;">#${o.id}</small></td>
+                    <td>${o.customer_name}</td>
+                    <td style="font-weight:bold;">$${o.total_price}</td>
+                    <td><span style="padding:4px 8px; border-radius:10px; font-size:0.8rem; background:${o.status === 'pending' ? '#fff3cd' : '#d4edda'}; color:${o.status === 'pending' ? '#856404' : '#155724'}">${o.status}</span></td>
+                    <td>
+                        <select onchange="updateStatus(${o.id}, this.value)" style="padding:5px; border-radius:8px; border:1px solid #ddd; font-family:var(--font-body);">
+                            <option value="pending" ${o.status === 'pending' ? 'selected' : ''}>قيد المعالجة</option>
+                            <option value="shipped" ${o.status === 'shipped' ? 'selected' : ''}>تم الشحن</option>
+                            <option value="completed" ${o.status === 'completed' ? 'selected' : ''}>مكتمل</option>
+                        </select>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadSettings() {
+            const { data, error } = await db.from('site_settings').select('*').eq('id', 1).single();
+            if (data) {
+                document.getElementById('settingDiscount').value = data.discount_rate;
+                document.getElementById('settingCod').checked = data.cod_enabled;
+            }
+        }
+
+        async function saveSettings() {
+            const discount = document.getElementById('settingDiscount').value;
+            const cod = document.getElementById('settingCod').checked;
+
+            const { error } = await db.from('site_settings').update({
+                discount_rate: discount,
+                cod_enabled: cod
+            }).eq('id', 1);
+
+            if (!error) alert('✅ تم تحديث الإعدادات بنجاح!');
+            else alert('❌ خطأ: ' + error.message);
+        }
+
+        function openModal() {
+            document.getElementById('modalTitle').innerText = 'إضافة منتج جديد';
+            document.getElementById('editProductId').value = '';
+            document.getElementById('pName').value = '';
+            document.getElementById('pPrice').value = '';
+            document.getElementById('pDesc').value = '';
+            document.getElementById('pImgFile').value = '';
+            document.getElementById('currentImgPreview').innerText = '';
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        function openEditModal(product) {
+            document.getElementById('modalTitle').innerText = 'تعديل المنتج';
+            document.getElementById('editProductId').value = product.id;
+            document.getElementById('pName').value = product.name;
+            document.getElementById('pPrice').value = product.price;
+            document.getElementById('pDesc').value = product.description;
+            document.getElementById('currentImgPreview').innerText = 'ملاحظة: اترك الصورة فارغة للاحتفاظ بالصورة القديمة.';
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        async function saveProduct() {
+            const id = document.getElementById('editProductId').value;
+            const name = document.getElementById('pName').value;
+            const price = document.getElementById('pPrice').value;
+            const desc = document.getElementById('pDesc').value;
+            const fileInput = document.getElementById('pImgFile');
+            const file = fileInput.files[0];
+
+            if(!name || !price) { alert('الاسم والسعر مطلوبان'); return; }
+
+            document.getElementById('saveBtn').disabled = true;
+            document.getElementById('loader').style.display = 'block';
+
+            try {
+                let imageUrl = null;
+                if (file) {
+                    const fileName = Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9.]/g, '');
+                    const { error: uploadError } = await db.storage.from('images').upload(fileName, file);
+                    if(uploadError) throw uploadError;
+                    imageUrl = SUPABASE_URL + '/storage/v1/object/public/images/' + fileName;
+                }
+
+                if (id) {
+                    const updateData = { name: name, price: price, description: desc };
+                    if (imageUrl) updateData.image_url = imageUrl;
+                    const { error } = await db.from('products').update(updateData).eq('id', id);
+                    if(error) throw error;
+                    alert('✅ تم تعديل المنتج بنجاح');
+                } else {
+                    if (!imageUrl) { throw new Error('يرجى اختيار صورة للمنتج الجديد'); }
+                    const { error } = await db.from('products').insert({
+                        name: name, price: price, image_url: imageUrl, description: desc
+                    });
+                    if(error) throw error;
+                    alert('✅ تمت الإضافة بنجاح');
+                }
+                closeModal();
+                loadData();
+            } catch (err) {
+                alert('❌ خطأ: ' + err.message);
+            } finally {
+                document.getElementById('saveBtn').disabled = false;
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        function closeModal() { document.getElementById('productModal').classList.remove('active'); }
+
+        async function deleteProduct(id) {
+            if(confirm('هل أنت متأكد من الحذف النهائي؟')) {
+                await db.from('products').delete().eq('id', id);
+                loadData();
+            }
+        }
+
+        async function updateStatus(id, newStatus) {
+            await db.from('orders').update({ status: newStatus }).eq('id', id);
+            loadData();
+        }
+
+        function switchPage(pageId, el) {
+            document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            el.classList.add('active');
+            const titles = {'dashboard': 'الرئيسية', 'products': 'المنتجات', 'orders': 'الطلبات', 'settings': 'الإعدادات'};
+            document.getElementById('pageTitle').innerText = titles[pageId];
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
